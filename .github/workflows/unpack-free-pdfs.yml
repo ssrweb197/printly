@@ -1,0 +1,28 @@
+name: Extract free PDF downloads
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/unpack-free-pdfs.yml'
+      - 'Printly_First_4_Digital_Products.zip'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Extract PDFs
+        run: |
+          mkdir -p downloads
+          unzip -o Printly_First_4_Digital_Products.zip -d downloads
+          test "$(find downloads -maxdepth 1 -name '*.pdf' | wc -l)" -eq 4
+      - name: Commit individual PDFs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/*.pdf
+          git diff --cached --quiet || git commit -m "Add individual free PDF downloads"
+          git push
