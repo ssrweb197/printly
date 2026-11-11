@@ -1,7 +1,7 @@
 const products=[
-{name:"The Weekly Reset Planner",category:"planner",price:99,description:"A calm, simple layout for priorities, plans and weekly reflection. Includes a weekly overview, top priorities, task list and reflection space."},
-{name:"Monthly Money Map",category:"budget",price:149,description:"Track income, expenses, savings goals and monthly spending in one clear printable workbook."},
-{name:"Home Reset Checklist",category:"checklist",price:79,description:"A practical home-care checklist covering kitchen, laundry, living spaces and weekly essentials."},
+{name:"The Weekly Reset Planner",category:"planner",price:99,description:"A calm, simple layout for priorities, plans and weekly reflection. Includes a weekly overview, top priorities, daily planning pages and reflection space."},
+{name:"Monthly Money Map",category:"budget",price:149,description:"Track income, expenses, savings goals and monthly spending in one clear printable workbook with trackers and review pages."},
+{name:"Home Reset Checklist",category:"checklist",price:79,description:"A practical home-care checklist covering kitchen, laundry, living spaces and weekly essentials and a monthly review."},
 {name:"Small Business Starter Kit",category:"business",price:199,description:"Simple printable trackers for clients, orders, tasks and invoices to help organise a small business."}
 ];
 let active="all";
