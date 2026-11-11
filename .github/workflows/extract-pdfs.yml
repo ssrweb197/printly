@@ -1,0 +1,34 @@
+name: Extract Printly PDF downloads
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Printly_First_4_Digital_Products.zip"
+      - ".github/workflows/extract-pdfs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Extract PDFs
+        run: |
+          mkdir -p downloads
+          unzip -o Printly_First_4_Digital_Products.zip -d /tmp/printly-pdfs
+          find /tmp/printly-pdfs -maxdepth 2 -type f -iname '*.pdf' -exec cp {} downloads/ \;
+          test "$(find downloads -maxdepth 1 -type f -iname '*.pdf' | wc -l)" -ge 4
+      - name: Commit separate PDFs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/*.pdf
+          if ! git diff --cached --quiet; then
+            git commit -m "Add separate free Printly PDF downloads"
+            git push
+          fi
