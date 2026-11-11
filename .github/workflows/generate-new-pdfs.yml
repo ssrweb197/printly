@@ -1,0 +1,74 @@
+name: Generate new Printly PDF products
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/generate-new-pdfs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate printable PDFs
+        run: |
+          python -m pip install reportlab
+          cat > /tmp/make_printly_pdfs.py <<'PY'
+          from reportlab.lib.pagesizes import A4
+          from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+          from reportlab.lib import colors
+          from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+          from reportlab.lib.units import mm
+          import os
+          os.makedirs("downloads", exist_ok=True)
+          styles=getSampleStyleSheet()
+          styles.add(ParagraphStyle(name="PT",parent=styles["Title"],fontSize=21,leading=25,textColor=colors.HexColor("#294638"),alignment=1,spaceAfter=8))
+          styles.add(ParagraphStyle(name="PS",parent=styles["Normal"],fontSize=9,leading=14,textColor=colors.HexColor("#68736b"),alignment=1,spaceAfter=15))
+          styles.add(ParagraphStyle(name="HX",parent=styles["Heading2"],fontSize=12,textColor=colors.HexColor("#d96d4b"),spaceBefore=8,spaceAfter=5))
+          styles.add(ParagraphStyle(name="BX",parent=styles["Normal"],fontSize=8.5,leading=12))
+          line=colors.HexColor("#d9ded5")
+          def P(t,s="BX"): return Paragraph(t,styles[s])
+          def T(rows,widths,heights=None):
+              x=Table(rows,colWidths=widths,rowHeights=heights)
+              x.setStyle(TableStyle([("GRID",(0,0),(-1,-1),.5,line),("BACKGROUND",(0,0),(-1,0),colors.HexColor("#f7f4ed")),("VALIGN",(0,0),(-1,-1),"MIDDLE"),("LEFTPADDING",(0,0),(-1,-1),6),("TOPPADDING",(0,0),(-1,-1),7),("BOTTOMPADDING",(0,0),(-1,-1),7)]))
+              return x
+          def foot(c,d):
+              c.saveState(); c.setStrokeColor(line); c.line(18*mm,14*mm,A4[0]-18*mm,14*mm); c.setFont("Helvetica",8); c.setFillColor(colors.HexColor("#7b837b")); c.drawString(18*mm,9*mm,"PRINTLY  •  LITTLE STEPS COUNT"); c.drawRightString(A4[0]-18*mm,9*mm,f"Page {d.page}"); c.restoreState()
+          def save(name,story):
+              SimpleDocTemplate("downloads/"+name,pagesize=A4,rightMargin=18*mm,leftMargin=18*mm,topMargin=17*mm,bottomMargin=21*mm).build(story,onFirstPage=foot,onLaterPages=foot)
+          s=[Spacer(1,10*mm),P("THE DAILY HABIT TRACKER","PT"),P("Build small routines. Notice your progress. Keep showing up.","PS"),P("MONTHLY INTENTION","HX"),P("This month, I want to make more room for: ______________________________________________"),P("MY HABITS","HX"),T([["Habit","Why it matters","Target"]]+[["______________________","______________________","________"] for _ in range(7)],[58*mm,76*mm,35*mm]),P("30-DAY CHECK-IN","HX")]
+          for start in (1,11,21):
+              hdr=["Habit"]+[str(i) for i in range(start,min(start+10,31))]
+              s += [T([hdr]+[["____________"]+["□"]*(len(hdr)-1) for _ in range(4)],[35*mm]+[13.4*mm]*(len(hdr)-1)),Spacer(1,5*mm)]
+          s += [PageBreak(),P("WEEKLY REFLECTION","PT"),P("A quick pause to learn what works and what needs adjusting.","PS")]
+          for w in range(1,5):
+              s += [P(f"WEEK {w}","HX"),P("A small win I am proud of: __________________________________________________________"),P("What made my habits easier? ________________________________________________________"),P("What got in the way? ______________________________________________________________"),P("One adjustment for next week: ______________________________________________________"),Spacer(1,5*mm)]
+          s += [P("REMEMBER","HX"),P("Consistency is not perfection. If you miss a day, begin again with the next small step.")]
+          save("05_Daily_Habit_Tracker.pdf",s)
+          s=[Spacer(1,10*mm),P("WEEKLY MEAL PLANNER","PT"),P("Plan simple meals, make a focused shopping list, and reduce weekday guesswork.","PS"),P("WEEK OF: __________________________  HOUSEHOLD: __________________________"),P("WEEKLY MEAL PLAN","HX"),T([["Day","Breakfast","Lunch","Dinner"]]+[[d,"","",""] for d in ["Monday","Tuesday","Wednesday","Thursday","Friday","Saturday","Sunday"]],[25*mm,43*mm,43*mm,43*mm],[10*mm]+[18*mm]*7),P("PREP AHEAD","HX"),T([["Task","Notes"],["Wash / chop vegetables",""],["Cook grains / basics",""],["Defrost / marinate",""],["Pack snacks / lunches",""]],[65*mm,132*mm]),PageBreak(),P("GROCERY SHOPPING LIST","PT"),P("Take this list with you and tick items as you shop.","PS")]
+          for cat in ["Vegetables & fruit","Dairy & chilled","Grains & bakery","Protein","Pantry & spices","Snacks & drinks","Household"]:
+              s += [P(cat,"HX"),T([["Item","Quantity","Done"]]+[["","","□"] for _ in range(3)],[105*mm,55*mm,37*mm]),Spacer(1,3*mm)]
+          s += [P("BUDGET & NOTES","HX"),P("Planned grocery budget: __________________  Actual spend: __________________"),P("Meals to repeat next week: __________________________________________________________")]
+          save("06_Weekly_Meal_Planner_Grocery_List.pdf",s)
+          s=[Spacer(1,10*mm),P("STUDENT STUDY PLANNER","PT"),P("Turn big subjects into manageable study sessions.","PS"),P("STUDENT: __________________________  WEEK OF: __________________________"),P("WEEKLY STUDY MAP","HX"),T([["Day","Subject / Topic","Study goal","Done"]]+[[d,"","","□"] for d in ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]],[22*mm,58*mm,80*mm,17*mm],[10*mm]+[19*mm]*7),P("TOP 3 PRIORITIES","HX"),T([["Priority","Next action","Due"],["1","",""],["2","",""],["3","",""]],[45*mm,95*mm,37*mm]),PageBreak(),P("DAILY FOCUS SESSION","PT"),P("Use one copy for each important study day.","PS")]
+          for i in range(1,4):
+              s += [P(f"SESSION {i}","HX"),P("Subject: _____________________  Topic: _____________________  Time: ______________"),P("What I want to understand: _________________________________________________________"),T([["Focus block","Task","Complete"],["1","","□"],["2","","□"],["3","","□"]],[35*mm,112*mm,30*mm]),Spacer(1,6*mm)]
+          s += [P("END-OF-WEEK REVIEW","HX"),P("What improved? __________________________________________________________________"),P("What needs more practice? __________________________________________________________"),P("My next week's first step: __________________________________________________________")]
+          save("07_Student_Study_Planner.pdf",s)
+          s=[Spacer(1,10*mm),P("SMALL BUSINESS INVOICE & QUOTE KIT","PT"),P("A printable worksheet to prepare estimates, record payments and follow up confidently.","PS"),P("BUSINESS DETAILS","HX"),P("Business name: __________________________________________________________________"),P("Address / phone / email: ___________________________________________________________"),P("Tax / registration details (if applicable): ______________________________________________"),P("QUOTE / ESTIMATE","HX"),P("Quote number: __________________  Date: ______________  Valid until: ______________"),P("Customer name: ______________________________  Contact: __________________________"),P("Project / service: __________________________________________________________________"),T([["Description","Qty","Rate","Amount"]]+[["","","",""] for _ in range(6)],[82*mm,22*mm,35*mm,38*mm]),P("Subtotal: __________________  Discount: __________________  Tax (if applicable): __________________"),P("TOTAL QUOTED: ______________________________"),P("Terms / delivery timeline: __________________________________________________________"),PageBreak(),P("INVOICE & PAYMENT RECORD","PT"),P("Invoice number: __________________  Invoice date: ______________  Due date: ______________"),P("Customer / client: __________________________________________________________________"),T([["Description","Qty","Rate","Amount"]]+[["","","",""] for _ in range(6)],[82*mm,22*mm,35*mm,38*mm]),P("Subtotal: __________________  Tax (if applicable): __________________  Total due: __________________"),P("Payment received: __________________  Balance due: __________________"),P("Payment method / reference: ________________________________________________________"),P("PAYMENT FOLLOW-UP","HX"),T([["Date","Follow-up / note","Next action"],["","",""],["","",""],["","",""]],[35*mm,90*mm,52*mm]),Spacer(1,5*mm),P("Adapt tax fields and invoice requirements to the rules that apply to your business. This worksheet is a planning aid, not tax or legal advice.")]
+          save("08_Small_Business_Invoice_Quote_Kit.pdf",s)
+          PY
+          python /tmp/make_printly_pdfs.py
+      - name: Commit PDFs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add downloads/05_Daily_Habit_Tracker.pdf downloads/06_Weekly_Meal_Planner_Grocery_List.pdf downloads/07_Student_Study_Planner.pdf downloads/08_Small_Business_Invoice_Quote_Kit.pdf
+          git commit -m "Add four new free Printly PDF products" || exit 0
+          git pull --rebase origin main
+          git push
